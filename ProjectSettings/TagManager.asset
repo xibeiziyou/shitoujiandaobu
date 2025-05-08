@@ -3,12 +3,14 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - "\u68CB\u76D8"
+  - "\u68CB\u724C"
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - "\u68CB\u76D8\u5C42"
   - Water
   - UI
   - 
