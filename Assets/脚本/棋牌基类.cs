@@ -46,7 +46,7 @@ class 棋牌基类 : MonoBehaviour
     {
         激活数 = (激活数 + 1) % 2;
         激活牌型 = 自身牌型[激活数];
-        transform.DORotate(new(0, 0, 180 * 激活数), 1);
+        transform.DORotate(new(transform.rotation.x, transform.rotation.y, 180 * 激活数), 1);
         回调?.Invoke();
     }
 

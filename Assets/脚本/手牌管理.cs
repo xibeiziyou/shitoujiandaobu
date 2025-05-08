@@ -7,14 +7,14 @@ public class 手牌管理 : Unity单例类<手牌管理>
     [Header("布局配置")]
     [SerializeField] float 最小角度 = 15f;   // 1张牌时的角度
     [SerializeField] float 最大角度 = 60f;  // 最大展开角度
-    [SerializeField] float 基础半径 = 3f;    // 基准距离
-    [SerializeField] float 半径增量 = 0.2f;  // 每张牌增加的半径
+    [SerializeField] float 基础半径 = 3.5f;    // 基准距离
+    [SerializeField] float 半径增量 = 0.1f;  // 每张牌增加的半径
     [SerializeField] float 动画时长 = 0.5f;  // 布局动画时间
     [SerializeField] Ease 缓动类型 = Ease.OutBack;
 
     List<棋牌基类> 当前手牌 = new();
     string[] 牌名 = { "石剪", "石布", "布剪", "石王", "布王", "剪王" };
-    Vector3 布局中心点 = new Vector3(0, -4, -6.6f);
+    Vector3 布局中心点 = new(0, -4, -6.6f);
 
     private void Start()
     {
@@ -60,7 +60,7 @@ public class 手牌管理 : Unity单例类<手牌管理>
             Vector3 目标位置 = 计算牌位置(i, 角度偏移, 实际半径);
 
             // 修改旋转计算方式
-            Quaternion 目标旋转 = Quaternion.Euler(0, 计算牌朝向角度(目标位置), 0);
+            Quaternion 目标旋转 = Quaternion.Euler(0, 计算牌朝向角度(目标位置) - 180, 0);
 
             牌变换.DOKill();
             DOTween.Sequence()
