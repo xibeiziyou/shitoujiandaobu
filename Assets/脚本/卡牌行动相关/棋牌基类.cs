@@ -4,7 +4,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Events;
 
-class 棋牌基类 : MonoBehaviour
+public class 棋牌基类 : MonoBehaviour
 {
 
     public static 棋牌基类 当前放大牌;
@@ -15,13 +15,15 @@ class 棋牌基类 : MonoBehaviour
     private Vector3 原始尺寸;
     bool 触发 = false;
 
+    public int 主客方;
+
     private static List<GameObject> 提示组 = new();
     public enum 牌型
     {
-        石,
-        剪,
+        王,
         布,
-        王
+        剪,
+        石
     }
 
     牌型[] 自身牌型 = new 牌型[2];
@@ -32,8 +34,10 @@ class 棋牌基类 : MonoBehaviour
 
     public bool 手牌 = true;
 
-    private void Start()
+    public void Start()
     {
+        主客方 = 0;
+
         原始尺寸 = transform.localScale;
 
         自身牌型[0] = (牌型)Enum.Parse(typeof(牌型), transform.name[0].ToString());
@@ -44,16 +48,36 @@ class 棋牌基类 : MonoBehaviour
 
     public void 翻转(UnityAction 回调 = null)
     {
+        if ((当前放大牌.transform.position.z == 1.5 && 主客方 == 0)|| (当前放大牌.transform.position.z == -1.5 && 主客方 == 1) )
+            if (当前放大牌.激活牌型 == 牌型.王)
+                Debug.Log("游戏胜利！胜利者：" + 游戏控制.唯一单例.当前执子者);
         激活数 = (激活数 + 1) % 2;
         激活牌型 = 自身牌型[激活数];
         transform.DORotate(new(transform.rotation.x, transform.rotation.y, 180 * 激活数), 1);
         回调?.Invoke();
+        if(!手牌) 游戏控制.唯一单例.执子者切换();
     }
 
     private void OnMouseDown()
     {
+        if (!游戏控制.唯一单例.执子判断(主客方)) return;
         if (行动点数 == 0) return;
-        // 即时反馈：按下缩小
+
+        // 双击检测专用时间戳
+        if (当前放大牌 == this)
+        {
+            float 时间差 = Time.time - 首次点击时间;
+            if (时间差 < 双击间隔)
+            {
+                处理双击();
+                return;
+            }
+        }
+        else // 新点击
+        {
+            首次点击时间 = Time.time;
+        }
+
         if (当前放大牌 != this) transform.DOScale(原始尺寸 * 0.8f, 0.1f);
         else 
         {
@@ -74,11 +98,8 @@ class 棋牌基类 : MonoBehaviour
         if (当前放大牌 != null && 当前放大牌 != this)
         {
             当前放大牌.恢复原状(() => { 可行动位隐藏(); });
-            Debug.Log("当前放大牌复原：" + 当前放大牌.name);
             当前放大牌 = null;
         }
-
-       if(当前放大牌 != null) Debug.Log("松开前放大牌为" + 当前放大牌.name); else { Debug.Log("放大牌为空"); }
     }
 
     public void 可行动位隐藏()
@@ -94,6 +115,7 @@ class 棋牌基类 : MonoBehaviour
 
     private void OnMouseUp()
     {
+        if (!游戏控制.唯一单例.执子判断(主客方)) return;
         if (行动点数 == 0) return;
         if (当前放大牌 == this)
         {
@@ -130,21 +152,34 @@ class 棋牌基类 : MonoBehaviour
             手牌 = false;
             偏移方向 = new Vector3[]
             {
-            new Vector3(1.5f, 0, 0)+当前坐标,  // 东
-            new Vector3(-1.5f, 0, 0)+当前坐标, // 西
-            new Vector3(0, 0, 1.5f)+当前坐标,  // 北
-            new Vector3(0, 0, -1.5f)+当前坐标  // 南
+            new Vector3(1.5f, 0, 0)+当前坐标, 
+            new Vector3(-1.5f, 0, 0)+当前坐标,
+            new Vector3(0, 0, 1.5f)+当前坐标, 
+            new Vector3(0, 0, -1.5f)+当前坐标
             };
         }
         else
         {
             手牌 = true;
-            偏移方向 = new Vector3[]
+            if (当前放大牌.主客方 == 0)
             {
-            new Vector3(1.5f, -4, -1.5f),
-            new Vector3(-1.5f, -4,-1.5f),
-            new Vector3(0, -4, -1.5f),
-            };
+                偏移方向 = new Vector3[]
+                {
+                new Vector3(1.5f, -4, -1.5f),
+                new Vector3(-1.5f, -4,-1.5f),
+                new Vector3(0, -4, -1.5f),
+                };
+            }
+            else 
+            {
+                偏移方向 = new Vector3[]
+                {
+                new Vector3(1.5f, -4, 1.5f),
+                new Vector3(-1.5f, -4,1.5f),
+                new Vector3(0, -4, 1.5f),
+                };
+            }
+
         }
 
         // 射线参数
@@ -173,20 +208,51 @@ class 棋牌基类 : MonoBehaviour
             // 可视化调试
             Debug.DrawRay(射线起点, 射线方向 * 检测距离, Color.cyan, 5f);
 
-            if (检测到物体)
-            {
-                Debug.Log($"在 {目标坐标} 位置检测到物体: {碰撞信息.collider.name}");
-                if (碰撞信息.collider.name == "提示")
-                {
-                    Debug.Log("nm");
-                }
-            }
-
             // 检测到有效棋牌
             if (检测到物体 && 碰撞信息.collider.CompareTag("棋牌"))
             {
-                Debug.Log($"在 {目标坐标} 位置检测到棋牌: {碰撞信息.collider.name}");
-                // 在此处处理可行动位逻辑（例如高亮地面）
+                棋牌基类 目标牌 = 碰撞信息.collider.GetComponent<棋牌基类>();
+
+                if (目标牌.手牌 || 目标牌.主客方 == 主客方) continue;
+                牌型 目标牌型 = 目标牌.激活牌型;
+                if (目标牌型 == 激活牌型) 
+                {
+                    GameObject 提示 = 对象池.唯一单例.取出对象("蓝");
+                    提示.GetComponent<放置_蓝>().设置目标牌(目标牌);
+                    提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
+                    提示组.Add(提示);
+                }
+                else if(目标牌型 == 牌型.石 && 激活牌型 == 牌型.布)
+                {
+                    GameObject 提示 = 对象池.唯一单例.取出对象("绿");
+                    提示.GetComponent<放置_绿>().设置目标牌(目标牌);
+                    提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
+                    提示组.Add(提示);
+                }
+                else if(目标牌型 == 牌型.布 && 激活牌型 == 牌型.石)
+                {
+                    GameObject 提示 = 对象池.唯一单例.取出对象("红");
+                    提示.GetComponent<放置_红>().设置目标牌(目标牌);
+                    提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
+                    提示组.Add(提示);
+                }
+                else 
+                {
+                    if ((int)目标牌型 > (int)激活牌型)
+                    {
+                        GameObject 提示 = 对象池.唯一单例.取出对象("红");
+                        提示.GetComponent<放置_红>().设置目标牌(目标牌);
+                        提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
+                        提示组.Add(提示);
+                    }
+                    else
+                    {
+                        GameObject 提示 = 对象池.唯一单例.取出对象("绿");
+                        提示.GetComponent<放置_绿>().设置目标牌(目标牌);
+                        提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
+                        提示组.Add(提示);
+                    }
+                }
             }
 
             if (检测到物体 && 碰撞信息.collider.CompareTag("棋盘"))
@@ -194,18 +260,30 @@ class 棋牌基类 : MonoBehaviour
                 GameObject 提示 = 对象池.唯一单例.取出对象("提示");
                 提示.transform.position = 目标坐标;
                 提示组.Add(提示);
-                Debug.Log($"在 {提示.transform.position} 位置检测到棋盘: {碰撞信息.collider.name}");
+                //Debug.Log($"在 {提示.transform.position} 位置检测到棋盘: {碰撞信息.collider.name}");
             }
         }
     }
 
     private void 处理双击()
     {
+        if (触发) return; // 防止重复触发
+        触发 = true;
+
         翻转(() => {
-            if(!手牌)
-            恢复原状(() => {
-                可行动位隐藏();
-            });
+            // 强制重置所有相关状态
+            当前放大牌 = null;
+            首次点击时间 = 0;
+            触发 = false;
+
+            if (!手牌)
+            {
+                恢复原状(() => 可行动位隐藏());
+            }
+            else
+            {
+                transform.DOScale(原始尺寸, 0.1f);
+            }
         });
     }
 

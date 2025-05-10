@@ -1,8 +1,9 @@
 using DG.Tweening;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class 手牌管理 : Unity单例类<手牌管理>
+public class 客手牌管理 : Unity单例类<客手牌管理>
 {
     [Header("布局配置")]
     [SerializeField] float 最小角度 = 15f;   // 1张牌时的角度
@@ -13,8 +14,8 @@ public class 手牌管理 : Unity单例类<手牌管理>
     [SerializeField] Ease 缓动类型 = Ease.OutBack;
 
     List<棋牌基类> 当前手牌 = new();
-    string[] 牌名 = { "石剪", "石布", "布剪", "石王", "布王", "剪王" };
-    Vector3 布局中心点 = new(0, -4, -6.6f);
+    string[] 牌名 = { "石剪-敌", "石布-敌", "布剪-敌", "石王-敌", "布王-敌", "剪王-敌" };
+    Vector3 布局中心点 = new(0, -4, 6.6f);
 
     private void Start()
     {
@@ -80,9 +81,9 @@ public class 手牌管理 : Unity单例类<手牌管理>
     {
         float 弧度 = 角度偏移 * Mathf.Deg2Rad;
         return new Vector3(
-            布局中心点.x + 半径 * Mathf.Sin(弧度),
+            布局中心点.x - 半径 * Mathf.Sin(弧度),
             布局中心点.y,
-            布局中心点.z + 半径 * Mathf.Cos(弧度)
+            布局中心点.z - 半径 * Mathf.Cos(弧度)
         );
     }
 }
