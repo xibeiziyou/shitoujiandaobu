@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class 主线程调度器 : Unity单例类<主线程调度器>
 {
-    private static readonly Queue<System.Action> 执行队列 = new Queue<System.Action>();
+    private static readonly Queue<System.Action> 执行队列 = new();
 
     //后台线程通过Enqueue添加任务
     public void 任务入队(System.Action action)

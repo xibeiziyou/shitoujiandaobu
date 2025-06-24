@@ -8,7 +8,7 @@ public class 房间
 {
     public int 房间号;
     public List<NetworkStream> 玩家列表 = new List<NetworkStream>();
-    public 棋子类型[,] 棋盘 = new 棋子类型[15, 15]; // 假设是15x15棋盘
+    public 棋子类型[,] 棋盘 = new 棋子类型[3, 3];
 }
 
 public static class 房间管理
@@ -21,7 +21,7 @@ public static class 房间管理
         var 新房间 = new 房间
         {
             房间号 = 当前最大房间号++,
-            棋盘 = new 棋子类型[15, 15]
+            棋盘 = new 棋子类型[3, 3]
         };
         所有房间.Add(新房间.房间号, 新房间);
         return 新房间.房间号;

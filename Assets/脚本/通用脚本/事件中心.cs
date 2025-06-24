@@ -81,6 +81,23 @@ public class 事件中心 : 单例类<事件中心>
         }
     }
 
+    int 事件数 = 0;
+    public void 事件同引用时间触发(string 事件名,int 事件引用数) 
+    {
+        if (!事件库.ContainsKey(事件名))return;
+
+        事件数++;
+
+        if(事件数 == 事件引用数) 
+        {
+            foreach (var (优先级, 方法) in 事件库[事件名])
+            {
+                方法?.Invoke();
+            }
+            事件数 = 0;
+        }
+    }
+
     // 清空事件库
     public void 清空()
     {

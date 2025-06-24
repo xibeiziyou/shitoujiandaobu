@@ -3,18 +3,18 @@ using System.Net;
 using UnityEngine;
 using STJDB协议类库;
 
-public static class 网络客户端
+public static class 客户端
 {
-    public static TcpClient 客户端;
+    public static TcpClient 客户;
     public static NetworkStream 网络流;
     private static string 最后连接的IP;
 
     public static void 连接服务器(string ip)
     {
         最后连接的IP = ip;
-        客户端 = new TcpClient();
-        客户端.Connect(IPAddress.Parse(ip), 8848);
-        网络流 = 客户端.GetStream();
+        客户 = new TcpClient();
+        客户.Connect(IPAddress.Parse(ip), 8848);
+        网络流 = 客户.GetStream();
         Debug.Log("连接服务器成功！");
     }
 
@@ -30,11 +30,11 @@ public static class 网络客户端
 
     public static void 开始监听()
     {
-        if (客户端 == null) return;
+        if (客户 == null) return;
         new System.Threading.Thread(() =>
         {
             byte[] 缓冲区 = new byte[1024];
-            while (客户端.Connected)
+            while (客户.Connected)
             {
                 try
                 {

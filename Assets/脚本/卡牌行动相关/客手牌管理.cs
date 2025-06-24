@@ -7,8 +7,8 @@ public class 客手牌管理 : Unity单例类<客手牌管理>
 {
     [Header("布局配置")]
     [SerializeField] float 最小角度 = 15f;   // 1张牌时的角度
-    [SerializeField] float 最大角度 = 60f;  // 最大展开角度
-    [SerializeField] float 基础半径 = 3.5f;    // 基准距离
+    [SerializeField] float 最大角度 = 90f;  // 最大展开角度
+    [SerializeField] float 基础半径 = 3f;    // 基准距离
     [SerializeField] float 半径增量 = 0.1f;  // 每张牌增加的半径
     [SerializeField] float 动画时长 = 0.5f;  // 布局动画时间
     [SerializeField] Ease 缓动类型 = Ease.OutBack;
@@ -17,13 +17,19 @@ public class 客手牌管理 : Unity单例类<客手牌管理>
     string[] 牌名 = { "石剪-敌", "石布-敌", "布剪-敌", "石王-敌", "布王-敌", "剪王-敌" };
     Vector3 布局中心点 = new(0, -4, 6.6f);
 
-    private void Start()
+    protected override void Awake()
     {
+        base.Awake();
         foreach (var item in 牌名)
         {
             var 手牌 = 对象池.唯一单例.取出对象(item);
             if (手牌 != null) 手牌加入(手牌);
         }
+    }
+
+    private void Start()
+    {
+        事件中心.唯一单例.事件同引用时间触发("标记获取", 2);
     }
 
     public void 手牌加入(GameObject 手牌)
@@ -40,7 +46,7 @@ public class 客手牌管理 : Unity单例类<客手牌管理>
         if (棋牌基类.当前放大牌 == null) return;
 
         棋牌基类.当前放大牌.手牌 = false;
-        棋牌基类.当前放大牌.transform.rotation = Quaternion.identity;
+        棋牌基类.当前放大牌.transform.rotation = Quaternion.Euler(0, 180, 0);
         当前手牌.Remove(棋牌基类.当前放大牌);
         位置调整();
     }

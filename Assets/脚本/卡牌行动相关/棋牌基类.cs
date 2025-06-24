@@ -16,8 +16,11 @@ public class 棋牌基类 : MonoBehaviour
     bool 触发 = false;
 
     public int 主客方;
-
-    private static List<GameObject> 提示组 = new();
+    GameObject 图片1;
+    GameObject 图片2;
+    SpriteRenderer 标记1;
+    SpriteRenderer 标记2;
+    private static readonly List<GameObject> 提示组 = new();
     public enum 牌型
     {
         王,
@@ -26,7 +29,7 @@ public class 棋牌基类 : MonoBehaviour
         石
     }
 
-    牌型[] 自身牌型 = new 牌型[2];
+    public readonly 牌型[] 自身牌型 = new 牌型[2];
 
     int 激活数 = 0;
 
@@ -44,18 +47,54 @@ public class 棋牌基类 : MonoBehaviour
         自身牌型[1] = (牌型)Enum.Parse(typeof(牌型), transform.name[1].ToString());
 
         激活牌型 = 自身牌型[激活数];
+
+        图片1 = transform.GetChild(0).gameObject;
+        图片2 = transform.GetChild(1).gameObject;
+        标记1 = transform.GetChild(2).GetComponent<SpriteRenderer>();
+        标记2 = transform.GetChild(3).GetComponent<SpriteRenderer>();
+        牌型调整();
+    }
+
+    void 牌型调整()
+    {
+        Sprite 新图片 = Resources.Load<Sprite>(自身牌型[(激活数 + 1) % 2].ToString());
+        Debug.Log(自身牌型[(激活数 + 1) % 2].ToString());
+        if (新图片 != null)
+        {
+            
+            标记1.sprite = 新图片;
+            标记2.sprite = 新图片;
+        }
+
+        if (激活牌型.ToString() == 图片1.name)
+        {
+            图片1.SetActive(true);
+            图片2.SetActive(false);
+        }
+        else
+        {
+            图片2.SetActive(true);
+            图片1.SetActive(false);
+        }
     }
 
     public void 翻转(UnityAction 回调 = null)
     {
-        if ((当前放大牌.transform.position.z == 1.5 && 主客方 == 0)|| (当前放大牌.transform.position.z == -1.5 && 主客方 == 1) )
-            if (当前放大牌.激活牌型 == 牌型.王)
-                Debug.Log("游戏胜利！胜利者：" + 游戏控制.唯一单例.当前执子者);
         激活数 = (激活数 + 1) % 2;
         激活牌型 = 自身牌型[激活数];
-        transform.DORotate(new(transform.rotation.x, transform.rotation.y, 180 * 激活数), 1);
+        transform.DORotate(new Vector3(
+            transform.eulerAngles.x,
+            transform.eulerAngles.y,
+            180 * 激活数), 1);
+        牌型调整();
+        if ((当前放大牌.transform.position.z == 1.5 && 主客方 == 0) || (当前放大牌.transform.position.z == -1.5 && 主客方 == 1))
+            if (当前放大牌.激活牌型 == 牌型.王)
+            {
+                行动点数 = 0;
+                Debug.Log("游戏胜利！胜利者：" + 游戏控制.唯一单例.当前执子者);
+            }
         回调?.Invoke();
-        if(!手牌) 游戏控制.唯一单例.执子者切换();
+        if (!手牌) 游戏控制.唯一单例.执子者切换();
     }
 
     private void OnMouseDown()
@@ -215,28 +254,29 @@ public class 棋牌基类 : MonoBehaviour
 
                 if (目标牌.手牌 || 目标牌.主客方 == 主客方) continue;
                 牌型 目标牌型 = 目标牌.激活牌型;
-                if (目标牌型 == 激活牌型) 
+                if (目标牌型 == 激活牌型)
                 {
+                    if(手牌)return;
                     GameObject 提示 = 对象池.唯一单例.取出对象("蓝");
                     提示.GetComponent<放置_蓝>().设置目标牌(目标牌);
                     提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
                     提示组.Add(提示);
                 }
-                else if(目标牌型 == 牌型.石 && 激活牌型 == 牌型.布)
+                else if (目标牌型 == 牌型.石 && 激活牌型 == 牌型.布)
                 {
                     GameObject 提示 = 对象池.唯一单例.取出对象("绿");
                     提示.GetComponent<放置_绿>().设置目标牌(目标牌);
                     提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
                     提示组.Add(提示);
                 }
-                else if(目标牌型 == 牌型.布 && 激活牌型 == 牌型.石)
+                else if (目标牌型 == 牌型.布 && 激活牌型 == 牌型.石)
                 {
                     GameObject 提示 = 对象池.唯一单例.取出对象("红");
                     提示.GetComponent<放置_红>().设置目标牌(目标牌);
                     提示.transform.position = 目标坐标 + new Vector3(0, 1, 0);
                     提示组.Add(提示);
                 }
-                else 
+                else
                 {
                     if ((int)目标牌型 > (int)激活牌型)
                     {
@@ -269,6 +309,8 @@ public class 棋牌基类 : MonoBehaviour
     {
         if (触发) return; // 防止重复触发
         触发 = true;
+
+
 
         翻转(() => {
             // 强制重置所有相关状态

@@ -4,11 +4,10 @@ using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
 
-public class 网络服务器 : MonoBehaviour
+public class 服务器 : MonoBehaviour
 {
     private TcpListener 监听器;
     private bool 运行中 = true;
-    private const int 最大客户端数 = 4;
 
     void Start()
     {
@@ -28,7 +27,7 @@ public class 网络服务器 : MonoBehaviour
             {
                 TcpClient 客户端 = 监听器.AcceptTcpClient();
                 Debug.Log($"客户端已连接: {客户端.Client.RemoteEndPoint}");
-                StartCoroutine(处理客户端通信(客户端)); // 修复3：重命名方法
+                StartCoroutine(处理客户端通信(客户端));
             }
             yield return new WaitForSeconds(0.1f);
         }
@@ -67,11 +66,9 @@ public class 网络服务器 : MonoBehaviour
 
     void 处理注册(注册 消息, NetworkStream 流)
     {
-        // 示例：随机分配房间
         int 房间号 = 房间管理.创建房间(流);
         消息.是否成功 = true;
 
-        // 回复客户端
         byte[] 回复数据 = 网络工具类.序列化(消息);
         流.Write(回复数据, 0, 回复数据.Length);
     }
@@ -84,8 +81,7 @@ public class 网络服务器 : MonoBehaviour
             return;
         }
 
-        // 检查棋盘位置是否合法
-        if (消息.X < 0 || 消息.X >= 15 || 消息.Y < 0 || 消息.Y >= 15)
+        if (消息.X < -1.5 || 消息.X > 1.5 || 消息.Y < -1.5 || 消息.Y > 1.5)
         {
             消息.操作结果 = false;
             return;

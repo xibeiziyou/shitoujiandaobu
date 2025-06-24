@@ -6,6 +6,8 @@ TagManager:
   tags:
   - "\u68CB\u76D8"
   - "\u68CB\u724C"
+  - "\u6807\u8BB0\u4E3B"
+  - "\u6807\u8BB0\u5BA2"
   layers:
   - Default
   - TransparentFX
@@ -13,8 +15,8 @@ TagManager:
   - "\u68CB\u76D8\u5C42"
   - Water
   - UI
-  - 
-  - 
+  - "\u4E3B"
+  - "\u5BA2"
   - 
   - 
   - 
@@ -42,4 +44,7 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: 
+    uniqueID: 509192699
     locked: 0

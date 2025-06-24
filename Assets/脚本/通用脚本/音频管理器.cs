@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -12,7 +11,7 @@ public class 音频管理器 : Unity单例类<音频管理器>
 
     private GameObject 音效;
 
-    private List<AudioSource> 音效列表 = new();
+    private readonly List<AudioSource> 音效列表 = new();
 
     private float 音效音量 = 1;
 
@@ -57,8 +56,10 @@ public class 音频管理器 : Unity单例类<音频管理器>
     {
         if (音效 == null)
         {
-            音效 = new();
-            音效.name = "音效";
+            音效 = new()
+            {
+                name = "音效"
+            };
         }
 
         资源加载.唯一单例.异步加载<AudioClip>("音频/音效/" + 音效名, (音源) => 
