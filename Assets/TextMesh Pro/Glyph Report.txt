@@ -1,0 +1,12 @@
+Font: Lolita  Style: Regular
+Point Size: 27   SP/PD Ratio: 18.5%
+
+Characters included: 3042/3042
+Missing characters: 0
+Excluded characters: 0
+
+Characters missing from font file:
+----------------------------------------
+
+Characters excluded from packing:
+----------------------------------------
