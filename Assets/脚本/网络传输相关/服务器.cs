@@ -1,101 +1,183 @@
-using STJDB协议类库;
 using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
+using STJDB;
+using System.Threading;
+using System.Collections.Generic;
 
 public class 服务器 : MonoBehaviour
 {
     private TcpListener 监听器;
     private bool 运行中 = true;
 
+    TcpClient 主户端;
+    TcpClient 客户端;
+    NetworkStream 主流;
+    NetworkStream 客流;
+    bool 是否主创 = true;
+
+    Thread 主户端监听线程;
+    Thread 客户端监听线程;
+
     void Start()
     {
         // 启动服务器
         IPAddress ip = IPAddress.Parse("0.0.0.0");
-        监听器 = new TcpListener(ip, 8848);
-        监听器.Start();
+        try
+        {
+            监听器 = new TcpListener(ip, 8848);
+            监听器.Start();
+        }
+        catch (SocketException ex)
+        {
+            Debug.Log($"端口被占用，服务器未启动: {ex.Message}");
+            运行中 = false;
+            return;
+        }
         Debug.Log("服务器已启动，等待连接...");
-        StartCoroutine(接受客户端连接());
+        StartCoroutine(接受主客户端连接());
     }
 
-    private IEnumerator 接受客户端连接()
+    private IEnumerator 接受主客户端连接()
     {
+        int a = 0;
         while (运行中)
         {
             if (监听器.Pending())
             {
-                TcpClient 客户端 = 监听器.AcceptTcpClient();
-                Debug.Log($"客户端已连接: {客户端.Client.RemoteEndPoint}");
-                StartCoroutine(处理客户端通信(客户端));
+                if (a >= 2) StopCoroutine(nameof(接受主客户端连接));
+                if (是否主创) 
+                {
+                    主户端 = 监听器.AcceptTcpClient();
+                    Debug.Log($"主户端已连接: {主户端.Client.RemoteEndPoint}");
+                    主流 = 主户端.GetStream();
+                    主户端监听线程 = new Thread(主户端监听);
+                    主户端监听线程.IsBackground = true;
+                    主户端监听线程.Start();
+                    是否主创 = false;
+                }
+                else
+                {
+                    客户端 = 监听器.AcceptTcpClient();
+                    Debug.Log($"客户端已连接: {客户端.Client.RemoteEndPoint}");
+                    客流 = 客户端.GetStream();
+                    客户端监听线程 = new Thread(客户端监听);
+                    客户端监听线程.IsBackground = true;
+                    客户端监听线程.Start();
+                }
+                a++;
             }
             yield return new WaitForSeconds(0.1f);
         }
     }
 
-    // 修复4：统一命名并添加参数
-    private IEnumerator 处理客户端通信(TcpClient 客户端)
+    // 发送消息时加4字节长度头
+    void 消息发送(byte[] 数据, NetworkStream 流) 
     {
-        NetworkStream 流 = 客户端.GetStream();
-        byte[] 缓冲区 = new byte[1024];
-
-        while (客户端.Connected)
+        if(流 == null) 
         {
-            if (流.DataAvailable)
+            Debug.Log("目标流还未连接");
+            return;
+        }
+        try
+        {
+            int len = 数据.Length;
+            byte[] lenBytes = System.BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder(len));
+            流.Write(lenBytes, 0, 4);
+            流.Write(数据, 0, len);
+            流.Flush();
+            //Debug.Log($"消息转发成功，长度: {数据.Length}");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"消息发送失败: {ex.Message}");
+        }
+    }
+
+    private void 主户端监听()
+    {
+        List<byte> 主缓冲区 = new();
+        byte[] 临时 = new byte[1024];
+        聊天消息 消息 = new()
+        {
+            消息 = "执子者切换"
+        };
+        byte[] 指令 = 协议工具类.打包<聊天消息>(消息类型.聊天消息, 消息);
+        消息发送(指令, 主流);
+        while (主户端.Connected)
+        {
+            try
             {
-                int 字节数 = 流.Read(缓冲区, 0, 缓冲区.Length);
-                byte[] 数据 = new byte[字节数];
-                System.Array.Copy(缓冲区, 数据, 字节数);
-
-                object 消息 = 网络工具类.反序列化<object>(数据);
-
-                if (消息 is 注册 注册消息)
+                int 字节数 = 主流.Read(临时, 0, 临时.Length);
+                if (字节数 > 0)
                 {
-                    处理注册(注册消息, 流);
-                }
-                else if (消息 is 下棋操作 下棋消息)
-                {
-                    处理下棋操作(下棋消息, 流);
+                    主缓冲区.AddRange(new System.ArraySegment<byte>(临时, 0, 字节数));
+                    // 分包处理
+                    while (主缓冲区.Count >= 4)
+                    {
+                        int msgLen = System.Net.IPAddress.NetworkToHostOrder(System.BitConverter.ToInt32(主缓冲区.ToArray(), 0));
+                        if (主缓冲区.Count >= 4 + msgLen)
+                        {
+                            byte[] msgBytes = 主缓冲区.GetRange(4, msgLen).ToArray();
+                            主缓冲区.RemoveRange(0, 4 + msgLen);
+                            Debug.Log($"主户端发送完整消息，长度: {msgLen}");
+                            // 用主线程调度器转发
+                            主线程调度器.唯一单例.任务入队(() => 消息发送(msgBytes, 客流));
+                        }
+                        else
+                        {
+                            break; // 不够一条完整消息，等下次Read
+                        }
+                    }
                 }
             }
-            yield return null;
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"处理主户端通信时出错: {ex.Message}");
+                break;
+            }
         }
+        Debug.Log("主户端监听线程结束");
     }
 
-    // 其他处理方法和游戏逻辑...
-
-    void 处理注册(注册 消息, NetworkStream 流)
+    private void 客户端监听()
     {
-        int 房间号 = 房间管理.创建房间(流);
-        消息.是否成功 = true;
-
-        byte[] 回复数据 = 网络工具类.序列化(消息);
-        流.Write(回复数据, 0, 回复数据.Length);
-    }
-
-    void 处理下棋操作(下棋操作 消息, NetworkStream 流)
-    {
-        if (!房间管理.所有房间.TryGetValue(消息.房间号码, out 房间 房间))
+        List<byte> 客缓冲区 = new();
+        byte[] 临时 = new byte[1024];
+        while (客户端.Connected)
         {
-            消息.操作结果 = false;
-            return;
+            try
+            {
+                int 字节数 = 客流.Read(临时, 0, 临时.Length);
+                if (字节数 > 0)
+                {
+                    客缓冲区.AddRange(new System.ArraySegment<byte>(临时, 0, 字节数));
+                    // 分包处理
+                    while (客缓冲区.Count >= 4)
+                    {
+                        int msgLen = System.Net.IPAddress.NetworkToHostOrder(System.BitConverter.ToInt32(客缓冲区.ToArray(), 0));
+                        if (客缓冲区.Count >= 4 + msgLen)
+                        {
+                            byte[] msgBytes = 客缓冲区.GetRange(4, msgLen).ToArray();
+                            客缓冲区.RemoveRange(0, 4 + msgLen);
+                            Debug.Log($"客户端发送完整消息，长度: {msgLen}");
+                            // 用主线程调度器转发
+                            主线程调度器.唯一单例.任务入队(() => 消息发送(msgBytes, 主流));
+                        }
+                        else
+                        {
+                            break; // 不够一条完整消息，等下次Read
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"处理客户端通信时出错: {ex.Message}");
+                break;
+            }
         }
-
-        if (消息.X < -1.5 || 消息.X > 1.5 || 消息.Y < -1.5 || 消息.Y > 1.5)
-        {
-            消息.操作结果 = false;
-            return;
-        }
-
-        // 更新棋盘
-        房间.棋盘[消息.X, 消息.Y] = 消息.棋子类型;
-        消息.操作结果 = true;
-
-        // 广播给所有玩家
-        foreach (var 玩家流 in 房间.玩家列表)
-        {
-            byte[] 数据 = 网络工具类.序列化(消息);
-            玩家流.Write(数据, 0, 数据.Length);
-        }
+        Debug.Log("客户端监听线程结束");
     }
 }

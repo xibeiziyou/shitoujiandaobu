@@ -4,8 +4,15 @@ public abstract class Unity单例类<T> : MonoBehaviour where T : MonoBehaviour
 {
     // 实例控制字段
     private static T 私有实例;
-    private static readonly object 线程锁 = new object();
+    private static readonly object 线程锁 = new();
     private static bool 应用退出标记 = false;
+
+    private static bool _场景切换时销毁 = false;
+    public static bool 场景切换时销毁
+    {
+        get => _场景切换时销毁;
+        set => _场景切换时销毁 = value;
+    }
 
     // 公开访问属性
     public static T 唯一单例
@@ -27,7 +34,10 @@ public abstract class Unity单例类<T> : MonoBehaviour where T : MonoBehaviour
                     {
                         GameObject 单例载体对象 = new GameObject($"{typeof(T)}_单例");
                         私有实例 = 单例载体对象.AddComponent<T>();
-                        DontDestroyOnLoad(单例载体对象);
+                        if (!_场景切换时销毁)
+                        {
+                            DontDestroyOnLoad(单例载体对象);
+                        }
                     }
                 }
                 return 私有实例;
@@ -45,7 +55,10 @@ public abstract class Unity单例类<T> : MonoBehaviour where T : MonoBehaviour
         else
         {
             私有实例 = this as T;
-            DontDestroyOnLoad(gameObject);
+            if (!_场景切换时销毁)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
         }
     }
 
