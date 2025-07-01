@@ -14,6 +14,7 @@ public class 开始面板 : 面板基类
     public int 旋转卡牌数 = 10;
     public float a, b;
     List<旋转卡牌> 卡牌组;
+
     旋转卡牌 卡牌;
     void Start()
     {
@@ -55,7 +56,12 @@ public class 开始面板 : 面板基类
         {
             卡牌 = 对象池.唯一单例.取出对象("旋转卡牌").GetComponent<旋转卡牌>();
             卡牌.transform.SetParent(卡牌层.transform, false);
-            卡牌.transform.position = new Vector3(Random.Range(-100, 1000), -100, 0);
+            RectTransform canvasRect = (RectTransform)卡牌层.GetComponentInParent<Canvas>().transform;
+            float left = 0;
+            float right = canvasRect.sizeDelta.x;
+            float y = -canvasRect.sizeDelta.y / 2f; // 最下边
+            float x = Mathf.Lerp(left, right, (float)i / (旋转卡牌数 - 1));
+            卡牌.transform.localPosition = new Vector3(x - canvasRect.sizeDelta.x / 2f, y, 0);
             卡牌组.Add(卡牌);
         }
     }
@@ -64,23 +70,24 @@ public class 开始面板 : 面板基类
     {
         if (Input.GetMouseButtonDown(0))
         {
-            音频管理器.唯一单例.音效播放("点击",false);
+            音频管理器.唯一单例.音效播放("点击", false);
             Vector2 本地坐标;
             var canvas = GetComponentInParent<Canvas>();
             Camera uiCamera = null;
             if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
                 uiCamera = canvas.worldCamera;
 
+            // 使用RectTransformUtility将屏幕坐标准确转换为UI本地坐标，适配所有分辨率
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 卡牌层.GetComponent<RectTransform>(),
                 Input.mousePosition,
                 uiCamera,
                 out 本地坐标
             );
-            Vector3 鼠标UI位置 = (Vector3)本地坐标;
+            Vector3 鼠标UI位置 = 卡牌层.GetComponent<RectTransform>().TransformPoint(本地坐标);
 
             // 用相对Canvas尺寸的位差（如30%、20%）
-            Vector2 canvasSize = ((RectTransform)canvas.transform).sizeDelta;
+            Vector2 canvasSize = ((RectTransform)canvas.transform).rect.size;
             Vector3 相对位差 = new Vector3(canvasSize.x * a, canvasSize.y * b, 0);
 
             foreach (var item in 卡牌组)
